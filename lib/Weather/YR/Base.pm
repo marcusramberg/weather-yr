@@ -4,7 +4,18 @@ use strict;
 use warnings;
 
 use Error qw/:try/;
-use LWP::UserAgent;
+use Mojo::Base -base;
+use Mojo::UserAgent;
+
+
+has ua => sub {
+  my $ua = Mojo::UserAgent->new;
+
+  my $version = $Weather::YR::VERSION;
+  $ua->transactor->name(sprintf('Perl Weather::YR/%s ', $version));
+
+  return $ua;
+};
 
 use Weather::YR;
 
@@ -27,26 +38,7 @@ my %CONFIG = ();
 
 
 =head1 METHODS
-
-=head2 new(C<\%args>)
-
-Constructor. Takes parameters as a B<HASHREF> that will be merged with the
-default configuration in L</%CONFIG>.
-
-=cut
-
-sub new {
-    my ( $class, $args ) = @_;
-
-    my $config  = $CONFIG{$class} || {};
-    my %config  = %$config;
-    my $self    = bless \%config, $class;
-
-    $self->merge_config($args);
-
-    return $self;
-}
-
+§
 =head2 config(C<%args>)
 
 Sets default package configuration values.
@@ -77,31 +69,13 @@ This method will try to fetch the content of the web service.
 sub fetch {
     my ( $self, $url ) = @_;
 
-    my $ua          = $self->get_ua();
+    my $ua          = $self->ua;
     my $response    = $ua->get($url);
 
-    return $response->content
-        if $response->is_success;
+    return $response->success->content
+        if $response->success;
 
     Error::Simple->throw("Unable to fetch content at url $url"); 
-}
-
-=head2 get_ua
-
-Creates and returns an user agent instance which can be used to fetch data
-from the YR web services.
-
-=cut
-
-sub get_ua {
-    my $ua = LWP::UserAgent->new();
-    $ua->timeout(15);
-    $ua->env_proxy;
-
-    my $version = $Weather::YR::VERSION;
-    $ua->agent(sprintf('Perl Weather::YR/%s ', $version));
-
-    return $ua;
 }
 
 =head2 get_url
@@ -113,7 +87,7 @@ value of C<< $self->{url} >>.
 
 sub get_url {
     my ( $self ) = @_;
-    return $self->{'url'};
+    return $self->{'url'} || $CONFIG{ref $self||$self}{'url'};
 }
 
 

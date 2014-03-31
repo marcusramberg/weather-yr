@@ -94,6 +94,8 @@ isa_ok(
 #
 # Checking the forecast data
 #
+require Data::Dumper;
+warn Data::Dumper::Dumper($forecast);
 ok(
     exists $forecast->{'winddirection'}->{'deg'},
     'Parsed wind direction'

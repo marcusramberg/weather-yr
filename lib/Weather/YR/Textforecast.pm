@@ -36,14 +36,14 @@ Weather::YR::Textforecast - Used to fetch text based forecast from YR
 This module returns textforecasts from YR according to specified parameters.
 
 This module uses the data from URLs such as these:
- http://api.yr.no/weatherapi/textforecast/1.2/?forecast=land;language=nb
+ http://api.yr.no/weatherapi/textforecast/1.6/?forecast=land;language=nb
 
 =head1 CONFIGURATION
 
 =head2 url
 
-The URL to the web service for getting the textforecasts. Defaults to version 2
-of the API: B<http://api.yr.no/weatherapi/textforecast/1.2/>.
+The URL to the web service for getting the textforecasts. Defaults to version 1.6
+of the API: B<http://api.yr.no/weatherapi/textforecast/1.6/>.
 
 =head2 forecast
 

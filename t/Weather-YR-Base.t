@@ -19,7 +19,7 @@ Weather::YR::Base->config(
 
 my $dummy = Weather::YR::Base->new();
 
-ok(my $ua = Weather::YR::Base::get_ua());
+ok(my $ua = $dummy->ua);
 is($dummy->get_url(), 'http://example.com');
 
 # Merging to new configuration

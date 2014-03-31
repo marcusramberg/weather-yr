@@ -12,7 +12,6 @@ use Weather::YR::Locationforecast::Forecast::Symbol;
 use Data::Dumper;
 use NEXT;
 use Params::Validate qw/:all/;
-use XML::Simple;
 
 use base 'Weather::YR::Base';
 
@@ -58,7 +57,7 @@ remaining five 24-hour periods, they are spaces three hours apart.
 =head2 url
 
 The URL to the web service for getting the textforecasts. Defaults to version
-1.5 of the API: B<http://api.yr.no/weatherapi/locationforecast/1.5/>.
+1.8 of the API: B<http://api.yr.no/weatherapi/locationforecast/1.8/>.
 
 =head2 latitude
 
@@ -71,7 +70,7 @@ The longitude of the location. No default, must be applied in constructor.
 =cut
 
 __PACKAGE__->config(
-    'url'       => 'http://api.yr.no/weatherapi/locationforecast/1.5/',
+    'url'       => 'http://api.yr.no/weatherapi/locationforecast/1.8/',
 );
 
 
@@ -133,17 +132,13 @@ This method parses the response from YR and returns a structure of objects.
 sub parse_weatherdata {
     my ( $self, $xml ) = @_;
 
-    my $ref = XMLin($xml,
-        ForceArray      => 1,
-        NormaliseSpace  => 2,
-        KeyAttr         => 0,
-    );
 
+    my $dom=Mojo::DOM->new($xml);
     my @forecasts = ();
     
-    my $meta = $ref->{'meta'}->[0];
+    my $meta = $dom->at('meta');
 
-    foreach my $time (@{ $ref->{'product'}->[0]->{'time'} }) {
+    for my $time ($dom->find('product time')->each) {
         my @forecast_refs = $self->parse_forecast_time($time);
         for my $forecast_ref (@forecast_refs) {
             $forecast_ref->meta($meta);
@@ -163,19 +158,19 @@ This method parses each time element in the forecast XML document.
 sub parse_forecast_time {
     my ( $self, $time_ref ) = @_;
 
-    my $to          = Weather::YR::Parser::parse_date_iso8601($time_ref->{'to'});
-    my $from        = Weather::YR::Parser::parse_date_iso8601($time_ref->{'from'});
-    my $type        = $time_ref->{'datatype'};
-    my $location    = $time_ref->{'location'}->[0];
+    my $to          = Weather::YR::Parser::parse_date_iso8601($time_ref->attr('to'));
+    my $from        = Weather::YR::Parser::parse_date_iso8601($time_ref->attr('from'));
+    my $type        = $time_ref->attr('datatype');
+    my $location    = $time_ref->at('location');
     
     my %forecast    = (
         'type'          => $type,
         'to'            => $to,
         'from'          => $from,
         'location'      => {
-            'latitude'      => $location->{'latitude'},
-            'longitude'     => $location->{'longitude'},
-            'altitude'      => $location->{'altitude'},
+            'latitude'      => $location->attr('latitude'),
+            'longitude'     => $location->attr('longitude'),
+            'altitude'      => $location->attr('altitude'),
         },
     );
 
@@ -184,15 +179,15 @@ sub parse_forecast_time {
     
     my $forecast_ref = Weather::YR::Locationforecast::Forecast->new(\%forecast);
     
-    if (exists $location->{'symbol'}) {
+    if ($location->at('symbol')) {
         push @forecasts, parse_forecast_symbol($forecast_ref, $location);
     }
 
-    if (exists $location->{'precipitation'}) {
+    if ($location->at('precipitation')) {
         push @forecasts, parse_forecast_precip($forecast_ref, $location);
     }
 
-    if (exists $location->{'fog'}) { # just to test a value
+    if ($location->at('fog')) { # just to test a value
         $forecast_ref = parse_forecast_full($forecast_ref, $location);
         push @forecasts, $forecast_ref;
     }
@@ -214,24 +209,24 @@ sub parse_forecast_full {
     
     my %forecast    = %$forecast_ref;
     my %full        = (
-        'fog'           => $location->{'fog'}->[0],
-        'pressure'      => $location->{'pressure'}->[0],
+        'fog'           => $location->at('fog'),
+        'pressure'      => $location->at('pressure'),
         'clouds'        => {
-            'low'           => $location->{'lowClouds'}->[0],
-            'medium'        => $location->{'mediumClouds'}->[0],
-            'high'          => $location->{'highClouds'}->[0],
-        },
-        'cloudiness'    => $location->{'cloudiness'}->[0],
-        'winddirection' => $location->{'windDirection'}->[0],
-        'windspeed'     => $location->{'windSpeed'}->[0],
-        'temperature'   => $location->{'temperature'}->[0],
+            'low'           => $location->at('lowClouds'),
+            'medium'        => $location->at('mediumClouds'),
+            'high'          => $location->at('highClouds'),
+    },
+        'cloudiness'    => $location->at('cloudiness'),
+        'winddirection' => $location->at('windDirection'),
+        'windspeed'     => $location->at('windSpeed'),
+        'temperature'   => $location->at('temperature'),
     );
     
     @forecast{keys %full} = values %full;
+
     
-    $forecast_ref = Weather::YR::Locationforecast::Forecast::Full->new(\%forecast);
+    return Weather::YR::Locationforecast::Forecast::Full->new(\%forecast);
     
-    return $forecast_ref;
 }
 
 =head2 parse_forecast_symbol(C<$location>)
@@ -242,18 +237,15 @@ This method parses forecasts that contains symbol data.
 
 sub parse_forecast_symbol {
     my ($forecast_ref, $location) = @_;
-    
-    my %forecast    = %$forecast_ref;
+    my $symbol=$location->at('symbol');
     my %symbol      = (
-        'number'        => $location->{'symbol'}->[0]->{'number'},
-        'name'          => $location->{'symbol'}->[0]->{'id'},
+        'number'        => $symbol->attr('number'),
+        'name'          => $symbol->attr('id'),
     );
     
-    @forecast{keys %symbol} = values %symbol;
     
-    $forecast_ref = Weather::YR::Locationforecast::Forecast::Symbol->new(\%forecast);
+    Weather::YR::Locationforecast::Forecast::Symbol->new(\%symbol);
     
-    return $forecast_ref;
 }
 
 =head2 parse_forecast_precip(C<$location>)
@@ -263,19 +255,16 @@ This method parses forecasts that contains precipitation data.
 =cut
 
 sub parse_forecast_precip {
-    my ($forecast_ref, $location) = @_;
+    my ($forecast, $location) = @_;
+    my $precipitation=$location->at('precipitation');
     
-    my %forecast    = %$forecast_ref;
     my %precip      = (
-        'unit'  => $location->{'precipitation'}->[0]->{'unit'},
-        'value' => $location->{'precipitation'}->[0]->{'value'},
+        'unit'  => $precipitation->attr('unit'),
+        'value' => $precipitation->attr('value')
     );
     
-    @forecast{keys %precip} = values %precip;
     
-    $forecast_ref = Weather::YR::Locationforecast::Forecast::Precip->new(\%forecast);
-    
-    return $forecast_ref;
+    return Weather::YR::Locationforecast::Forecast::Precip->new(\%precip);
 }
 
 =head2 get_url
@@ -288,7 +277,7 @@ the forecast type and language.
 sub get_url {
     my ( $self ) = @_;
 
-    my $baseurl = $self->{'url'};
+    my $baseurl = $self->SUPER::get_url;
     my $lat     = $self->{'latitude'};
     my $lon     = $self->{'longitude'};
     

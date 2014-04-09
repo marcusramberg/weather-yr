@@ -3,7 +3,7 @@
 
 #########################
 
-use Test::More tests => 24;
+use Test::More;
 use File::Slurp; # required for reading XML file
 
 BEGIN { use_ok('Weather::YR::Locationforecast') };
@@ -44,6 +44,8 @@ isa_ok(
     'The parsed data in return is an ARRAYREF'
 );
 
+
+$l_forecast->{forecast}=$parsed_ref;
 my $forecast        = $parsed_ref->[0];
 my $forecast_precip = $parsed_ref->[6];
 my $forecast_symbol = $parsed_ref->[5];
@@ -192,4 +194,31 @@ is(
     'Override the URL'
 );
 
+is(
+  $l_forecast->high,
+  11.1,
+  'Max temperature'
+);
+
+is(
+  $l_forecast->low,
+  0.4,
+  'Min temperature'
+);
+
+
+is(
+  $l_forecast->high('2014-04-09'),
+  5.3,
+  'Max temperature'
+);
+
+is(
+  $l_forecast->low('2014-04-09'),
+  2.3,
+  'Min temperature'
+);
+
 undef $forecast_url;
+
+done_testing;

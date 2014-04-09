@@ -99,17 +99,36 @@ sub forecast {
     return $self->{forecast};
 }
 
-=head2 high (
+=head2 high [<dmy>]
+
+High temperature, optionally filtered by day
+
+=cut
 
 sub high { max shift->temperatures(shift) } 
+
+=head2 low [<dmy>]
+
+Low temperature, optionally filtered by day
+
+=cut
+
 sub low { min shift->temperatures(shift) }
-sub temperatures { map { $_->temperature->attr('value') $self->full_forecasts(shift) } } 
+
+=head2 temperatures [<dmy>]
+
+Temperatures, optionally filtered by day
+
+=cut
+
+sub temperatures { map { $_->temperature->attr('value') }  shift->full_forecasts(shift) } 
+
 sub full_forecasts {
   my ($self,$date)=@_;
   grep { $_->isa('Weather::YR::Locationforecast::Forecast::Full') &&
-   ( $date ? $_->from->dmy eq $date : 1 }  
-  @{self->forecast} 
-
+   ( $date ? $_->from->ymd eq $date : 1 ) }  
+  @{$self->forecast} 
+}
 
 =head2 parse_weatherdata(C<$xml>)
 
@@ -208,8 +227,6 @@ sub parse_forecast_full {
         'windspeed'     => $location->at('windspeed'),
         'temperature'   => $location->at('temperature'),
     );
-
-    warn $location->to_xml unless $full{winddirection}; 
     
     @forecast{keys %full} = values %full;
 

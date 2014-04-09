@@ -9,11 +9,14 @@ use Weather::YR::Locationforecast::Forecast::Full;
 use Weather::YR::Locationforecast::Forecast::Precip;
 use Weather::YR::Locationforecast::Forecast::Symbol;
 
-use Data::Dumper;
-use NEXT;
-use Params::Validate qw/:all/;
+use List::Util qw/max min/;
 
-use base 'Weather::YR::Base';
+use Data::Dumper;
+
+use Mojo::Base qw/Weather::YR::Base/;
+
+has 'latitude';
+has 'longitude';
 
 =head1 NAME
 
@@ -76,35 +79,6 @@ __PACKAGE__->config(
 
 =head1 METHODS
 
-=head1 new(C<\%args>)
-
-Constructor that validates the incoming parameters. We request these parameters
-to be set:
-    latitude
-    longitude
-
-=cut
-
-sub new {
-    my $class   = shift;
-
-    my %args    = validate(@_,
-        {
-            'latitude'  => {
-                'type'      => SCALAR,
-            },
-            'longitude' => {
-                'type'      => SCALAR,
-            },
-            'url'       => {
-                'type'      => SCALAR,
-                'optional'  => 1,
-            },
-        }
-    );
-
-    return $class->NEXT::new(\%args);
-}
 
 =head2 forecast
 
@@ -115,13 +89,27 @@ Retrieves the forecast in a data structure representing the XML document.
 sub forecast {
     my ( $self ) = @_;
 
-    my $url     = $self->get_url();
-    my $content = $self->fetch($url);
+    if(!$self->{forecast}) { 
+      my $url     = $self->get_url();
+      my $content = $self->fetch($url);
 
-    my $forecast = $self->parse_weatherdata($content);
+      $self->{forecast} = $self->parse_weatherdata($content);
+    }
 
-    return $forecast;
+    return $self->{forecast};
 }
+
+=head2 high (
+
+sub high { max shift->temperatures(shift) } 
+sub low { min shift->temperatures(shift) }
+sub temperatures { map { $_->temperature->attr('value') $self->full_forecasts(shift) } } 
+sub full_forecasts {
+  my ($self,$date)=@_;
+  grep { $_->isa('Weather::YR::Locationforecast::Forecast::Full') &&
+   ( $date ? $_->from->dmy eq $date : 1 }  
+  @{self->forecast} 
+
 
 =head2 parse_weatherdata(C<$xml>)
 
@@ -206,21 +194,22 @@ data.
 
 sub parse_forecast_full {
     my ($forecast_ref, $location) = @_;
-    
     my %forecast    = %$forecast_ref;
     my %full        = (
         'fog'           => $location->at('fog'),
         'pressure'      => $location->at('pressure'),
         'clouds'        => {
-            'low'           => $location->at('lowClouds'),
-            'medium'        => $location->at('mediumClouds'),
-            'high'          => $location->at('highClouds'),
+            'low'           => $location->at('lowclouds'),
+            'medium'        => $location->at('mediumclouds'),
+            'high'          => $location->at('highclouds'),
     },
         'cloudiness'    => $location->at('cloudiness'),
-        'winddirection' => $location->at('windDirection'),
-        'windspeed'     => $location->at('windSpeed'),
+        'winddirection' => $location->at('winddirection'),
+        'windspeed'     => $location->at('windspeed'),
         'temperature'   => $location->at('temperature'),
     );
+
+    warn $location->to_xml unless $full{winddirection}; 
     
     @forecast{keys %full} = values %full;
 
@@ -278,8 +267,8 @@ sub get_url {
     my ( $self ) = @_;
 
     my $baseurl = $self->SUPER::get_url;
-    my $lat     = $self->{'latitude'};
-    my $lon     = $self->{'longitude'};
+    my $lat     = $self->latitude;
+    my $lon     = $self->longitude;
     
     my $url = "$baseurl?lon=$lon&lat=$lat";
     return $url;

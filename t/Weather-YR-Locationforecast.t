@@ -10,7 +10,7 @@ BEGIN { use_ok('Weather::YR::Locationforecast') };
 
 #########################
 
-my $xml_file    = 'doc/example/locationforecast-sande.xml';
+my $xml_file    = 'doc/example/locationforecast-oslo.xml';
 
 # Doesn't really matter what coordinates we enter here, we will read the
 # XML document from a local file.
@@ -19,13 +19,13 @@ my $l_forecast = Weather::YR::Locationforecast->new(
         # Geo codes for Sande (VE.)
         'latitude'  => '59.6327',
         'longitude' => '10.2468',
-        'url'       => 'http://api.yr.no/weatherapi/locationforecast/1.4/',
+        'url'       => 'http://api.yr.no/weatherapi/locationforecast/1.8/',
     }
 );
 
 is(
     $l_forecast->get_url,
-    'http://api.yr.no/weatherapi/locationforecast/1.4/?lon=10.2468&lat=59.6327',
+    'http://api.yr.no/weatherapi/locationforecast/1.8/?lon=10.2468&lat=59.6327',
     'Assemble URL with latitude and longitude'
 );
 
@@ -45,8 +45,8 @@ isa_ok(
 );
 
 my $forecast        = $parsed_ref->[0];
-my $forecast_precip = $parsed_ref->[5];
-my $forecast_symbol = $parsed_ref->[6];
+my $forecast_precip = $parsed_ref->[6];
+my $forecast_symbol = $parsed_ref->[5];
 
 # All forecasts should be of type Weather::YR::Locationforecast::Forecast
 isa_ok(
@@ -74,31 +74,31 @@ isa_ok(
 #
 is(
     $forecast->{'winddirection'}->{'deg'},
-    338.7,
+    33.2,
     'Parsed wind direction'
 );
 
 is(
     $forecast->{'windspeed'}->{'mps'},
-    3.3,
+    '6.0',
     'Parsed wind speed'
 );
 
 is(
     $forecast->{'temperature'}->{'value'},
-    '-1.0',
+    '4.8',
     'Parsed temperature'
 );
 
 is(
     $forecast->{'pressure'}->{'value'},
-    1007.8,
+    1013.6,
     'Parsed pressure'
 );
 
 is(
     $forecast->{'cloudiness'}->{'percent'},
-    1.4,
+    '100.0',
     'Parsed cloudiness'
 );
 
@@ -110,37 +110,37 @@ is(
 
 is(
     $forecast->{'clouds'}->{'low'}->{'percent'},
-    0.4,
+    99.4,
     'Parsed low clouds'
 );
 
 is(
     $forecast->{'clouds'}->{'medium'}->{'percent'},
-    0.8,
+    99.4,
     'Parsed medium clouds'
 );
 
 is(
     $forecast->{'clouds'}->{'high'}->{'percent'},
-    '0.0',
+    '99.4',
     'Parsed medium clouds'
 );
 
 is(
     $forecast->{'location'}->{'latitude'},
-    59.6327,
+    '59.9500',
     'Parsed location latitude'
 );
 
 is(
     $forecast->{'location'}->{'longitude'},
-    10.2468,
+    '10.7500',
     'Parsed location longitude'
 );
 
 is(
     $forecast->{'location'}->{'altitude'},
-    40,
+    107,
     'Parsed location altitude'
 );
 
@@ -149,14 +149,14 @@ is(
 # Testing precipitation
 #
 is(
-    $forecast_precip->{'unit'},
+    $forecast_precip->unit,
     'mm',
     'Parsed precipitation unit'
 );
 
 is(
-    $forecast_precip->{'value'},
-    6.7,
+    $forecast_precip->value,
+    0.5,
     'Parsed precipitation value'
 );
 
@@ -165,14 +165,14 @@ is(
 # Testing forecast symbol
 #
 is (
-    $forecast_symbol->{'number'},
-    1,
+    $forecast_symbol->number,
+    9,
     'Parsed symbol number'
 );
 
 is (
-    $forecast_symbol->{'name'},
-    'SUN',
+    $forecast_symbol->name,
+    'LIGHTRAIN',
     'Parsed symbol name/id'
 );
 
@@ -182,13 +182,13 @@ my $forecast_url = Weather::YR::Locationforecast->new(
         # Geo codes for Sande (VE.)
         'latitude'  => '59.6327',
         'longitude' => '10.2468',
-        'url'       => 'http://api.yr.no/weatherapi/locationforecast/1.5-someother/',
+        'url'       => 'http://api.yr.no/weatherapi/locationforecast/1.8-someother/',
     }
 );
 
 is(
     $forecast_url->get_url,
-    'http://api.yr.no/weatherapi/locationforecast/1.5-someother/?lon=10.2468&lat=59.6327',
+    'http://api.yr.no/weatherapi/locationforecast/1.8-someother/?lon=10.2468&lat=59.6327',
     'Override the URL'
 );
 

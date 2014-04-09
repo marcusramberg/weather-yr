@@ -72,7 +72,7 @@ sub fetch {
     my $ua          = $self->ua;
     my $response    = $ua->get($url);
 
-    return $response->success->content
+    return $response->success->body
         if $response->success;
 
     Error::Simple->throw("Unable to fetch content at url $url"); 
